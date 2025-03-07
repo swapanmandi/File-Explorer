@@ -5,6 +5,19 @@ export const useFolder = () => {
   const dispatch = useDispatch();
   const folderData = useSelector((state) => state.folder.folderData);
 
+  const calculateFolderSize = (folder) => {
+    if (!folder?.children || folder?.children.length === 0) return 0;
+
+    return folder.children.reduce((totalSize, child) => {
+      if (child.type !== "folder") {
+        return totalSize + child.size || 0;
+      } else if (child.type === "folder") {
+        return totalSize + calculateFolderSize(child);
+      }
+      return totalSize;
+    }, 0);
+  };
+
   const addFolder = (parentFolder, newFolderName) => {
     //console.log("p id-", parentFolder.id)
     const createFolder = {
@@ -14,7 +27,7 @@ export const useFolder = () => {
       createDate: new Date(),
       modifyDate: new Date(),
       content: "",
-      size:"",
+      size: "",
       children: [],
     };
 
@@ -32,7 +45,7 @@ export const useFolder = () => {
       });
     };
 
-    const updatedFolders = addFolderRecursive(folderData)
+    const updatedFolders = addFolderRecursive(folderData);
     dispatch(setFolderData(updatedFolders));
     localStorage.setItem("data", JSON.stringify(updatedFolders));
   };
@@ -73,5 +86,5 @@ export const useFolder = () => {
     localStorage.setItem("data", JSON.stringify(updatedData));
   };
 
-  return { addFolder, renameFolder, deleteFolder };
+  return { addFolder, renameFolder, deleteFolder, calculateFolderSize };
 };
