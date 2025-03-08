@@ -92,6 +92,7 @@ const ChildFolder = memo(({ folder }) => {
   };
 
   //console.log("folder", folder)
+ 
 
   return (
     <div ref={closeRef} className="w-full">
@@ -176,12 +177,22 @@ const ChildFolder = memo(({ folder }) => {
           )}
 
           {folder?.type !== "folder" && (
-            <h1
-              onClick={() => openFile(folder)}
-              className=" w-full hover:bg-orange-400 m-1 flex"
-            >
-              📄{folder?.name}
-            </h1>
+            <div className="grid grid-cols-2">
+              <h1
+                onClick={() => openFile(folder)}
+                className=" w-full hover:bg-orange-400 m-1 flex"
+              >
+                📄{folder?.name}
+              </h1>
+              <div className="">
+                {folder?.size < 1024000
+                  ? (folder?.size / 1024).toFixed(2).toString().concat(" KB")
+                  : (folder?.size / 1024000)
+                      .toFixed(2)
+                      .toString()
+                      .concat(" MB")}
+              </div>
+            </div>
           )}
           <div className=" flex justify-start pl-4">
             {isFolderOpen &&
