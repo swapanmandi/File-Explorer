@@ -6,6 +6,11 @@ import {
   setFolderData,
   setSortData,
 } from "../store/folderSlice.js";
+import {
+  saveFileToDB,
+  getFilesFromDB,
+  deleteFileFromDB,
+} from "../db/indexDB.js";
 
 export default function Header() {
   const [isClickNewFolder, setIsClickNewFolder] = useState(false);
@@ -15,18 +20,22 @@ export default function Header() {
   const [sortBy, setSortBy] = useState("");
 
   //console.log("q", query);
-  //console.log(sortType)
+  //console.log(files);
+
   const dispatch = useDispatch();
 
-  const { addFolder } = useFolder();
+  const { addFolder, calculateFolderSize } = useFolder();
   const currentFolder = useSelector((state) => state.folder.currentFolder);
   const folderData = useSelector((state) => state.folder.folderData);
+
+  //console.log("c folder", currentFolder)
 
   const handleNewFolderSave = () => {
     addFolder(currentFolder, newFolderName);
     setIsClickNewFolder(false);
   };
 
+  //search
   useEffect(() => {
     const searchResults = [];
     const searchData = (data) => {
@@ -48,16 +57,17 @@ export default function Header() {
     dispatch(setSearchData(searchResults));
   }, [query]);
 
+  //sort
   useEffect(() => {
     const sortFolder = (data, order, sortBy) => {
       return [...data]
         .map((folder) => ({
           ...folder,
-          children: folder.children ? sortFolder(folder.children, order) : [],
+          children: folder?.children ? sortFolder(folder.children, order) : [],
         }))
         .sort((a, b) => {
           if (sortBy === "size") {
-            return order === "asc" ? a.size.split(" ")[0] - b.size.split(" ")[0] : b.size.split(" ")[0] - a.size.split(" ")[0];
+            return order === "asc" ? a.size - b.size : b.size - a.size;
           } else if (sortBy === "date") {
             return order === "asc"
               ? new Date(a.createDate) - new Date(b.createDate)
@@ -69,9 +79,79 @@ export default function Header() {
           }
         });
     };
-    console.log("sd", sortFolder(folderData, order));
+    //console.log("sd", sortFolder(folderData, order));
     dispatch(setSortData(sortFolder(folderData, order, sortBy)));
-  }, [folderData, order, sortBy]);
+  }, [order, sortBy]);
+
+  const addFile = (folderData, newFile) => {
+    const addFileRecursive = (data) => {
+      return data.map((folder) => {
+        if (folder?.id === currentFolder?.id) {
+          const updatedChildren = [...folder.children, newFile];
+          return {
+            ...folder,
+            children: updatedChildren,
+            size: calculateFolderSize({ ...folder, children: updatedChildren }),
+          };
+        } else if (folder?.children?.length > 0) {
+          const updatedChildren = addFileRecursive(folder.children);
+          return {
+            ...folder,
+            children: updatedChildren,
+            size: calculateFolderSize({ ...folder, children: updatedChildren }),
+          };
+        }
+        return folder;
+      });
+    };
+
+    const updatedFolders = addFileRecursive(folderData);
+    dispatch(setFolderData(updatedFolders));
+
+    localStorage.setItem("data", JSON.stringify(updatedFolders));
+
+    setNewFolderName("");
+  };
+
+  const handleFileUpload = (e) => {
+    const uploadFile = e.target.files[0];
+    if (!uploadFile) return;
+
+    if (uploadFile.size > 5 * 1024 * 1024) {
+      alert("File size exceeds 5MB limit.");
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.readAsDataURL(uploadFile);
+
+    reader.onload = async () => {
+      const newFile = {
+        id: crypto.randomUUID() || Date.now(),
+        name: uploadFile.name,
+        type: uploadFile.type,
+        children: [],
+        size: uploadFile.size,
+        createDate: new Date(),
+        modifyDate: new Date(),
+        content: reader.result,
+      };
+
+      try {
+        await saveFileToDB(newFile);
+        addFile(folderData, newFile);
+      } catch (error) {
+        console.error("Error saving file:", error);
+        alert("Failed to save file. Please try again.");
+      }
+    };
+
+    reader.onerror = () => {
+      console.error("File reading failed");
+      alert("Failed to read file.");
+    };
+  };
 
   return (
     <div>
@@ -90,6 +170,7 @@ export default function Header() {
 
       <input
         value={query}
+        placeholder="search"
         onChange={(e) => setQuery(e.target.value)}
         className=" bg-blue-50 text-black"
       />
@@ -99,6 +180,7 @@ export default function Header() {
         <button onClick={() => setSortBy("date")}>date</button>
         <button onClick={() => setSortBy("size")}>size</button>
       </div>
+      <input type="file" onChange={handleFileUpload} />
     </div>
   );
 }
