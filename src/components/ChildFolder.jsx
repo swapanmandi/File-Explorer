@@ -1,32 +1,47 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, memo } from "react";
+import { useFolder } from "../hooks/useFolder.js";
+import { useDispatch, useSelector } from "react-redux";
+import { setCurrentFolder, toggleFolder } from "../store/folderSlice.js";
+import { Link } from "react-router-dom";
 
-export default function ChildFolder({
-  folder,
-  addFolder,
-  deleteFolder,
-  renameFolder,
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isClickFolder, setIsClickFolder] = useState(false);
+const ChildFolder = memo(({ folder }) => {
+  const [isRightClickOnFolder, setIsRightClickOnFolder] = useState(false);
   const [isClickNewFolder, setIsClickNewFolder] = useState(false);
   const [isClickRenameFolder, setIsClickRenameFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [renameFolderName, setRenameFolderName] = useState("");
 
-  const closeRef = useRef();
+  const currentFolder = useSelector((state) => state.folder.currentFolder);
+  const openFolders = useSelector((state) => state.folder.openFolders);
 
-  const handleClickFolder = () => {
-    setIsOpen(!isOpen);
+  const closeRef = useRef();
+  //console.log("cf", currentFolder)
+
+  const dispatch = useDispatch();
+
+  const { addFolder, renameFolder, deleteFolder } = useFolder();
+
+  // if (!folder || Object.keys(folder).length === 0) {
+  //   return <div className="text-white">Loading...</div>;
+  // }
+
+  const handleClickFolder = (item) => {
+    dispatch(toggleFolder(item.id));
+    dispatch(setCurrentFolder(item));
+    setIsRightClickOnFolder(false);
   };
 
-  const rightClick = (e) => {
+  const isFolderOpen = openFolders.includes(folder?.id);
+
+  const handleRightClickFolder = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsClickFolder(!isClickFolder);
+    setIsRightClickOnFolder(!isRightClickOnFolder);
   };
 
-  const handleNewFolderSave = (data) => {
-    addFolder(data, newFolderName);
+  const handleNewFolderSave = (parentFolder) => {
+    //console.log("parent id:", id)
+    addFolder(parentFolder, newFolderName);
     setIsClickNewFolder(false);
   };
   const handleDeleteFolder = (data) => {
@@ -42,7 +57,7 @@ export default function ChildFolder({
     const handleClickOutside = (e) => {
       //
       if (closeRef.current && !closeRef.current.contains(e.target)) {
-        setIsClickFolder(false);
+        setIsRightClickOnFolder(false);
       }
     };
 
@@ -53,12 +68,41 @@ export default function ChildFolder({
     };
   }, []);
 
+  const openFile = (file) => {
+    try {
+      const newTab = window.open();
+      if (file.type.split("/")[0] === "audio") {
+        newTab.document.write(`
+          <audio controls>
+          <source src="${file.content}" type="audio/mpeg">
+          </audio>`);
+      } else if (file.type.split("/")[0] === "image") {
+        newTab.document.write(
+          `<img style="height:400px; width:600px" src="${file.content}" />`
+        );
+      } else if (file.type.split("/")[0] === "video") {
+        newTab.document.write(
+          `<video width="320" height="240" controls>
+  <source src="${file.content}" type="video/mp4">
+</video>`
+        );
+      }
+    } catch (error) {
+      console.error("Error to open this file-", error);
+    }
+  };
+
+  //console.log("folder", folder)
+
   return (
-    <div ref={closeRef} className=" flex items-center justify-center">
-      <div className={`   bg-red-300 w-md  flex flex-col justify-start`}>
+    <div ref={closeRef} className="w-full">
+      <div className={`flex flex-col justify-start`}>
         <div>
-          {folder.type === "folder" && (
-            <div onContextMenu={rightClick} className="flex space-x-2">
+          {folder?.type === "folder" && (
+            <div
+              onContextMenu={handleRightClickFolder}
+              className="flex space-x-2"
+            >
               {isClickRenameFolder ? (
                 <div>
                   📁
@@ -74,18 +118,22 @@ export default function ChildFolder({
               ) : (
                 <h1
                   onClick={() => handleClickFolder(folder)}
-                  className={`  m-1 w-fit flex`}
+                  className={` w-full m-1 flex hover:bg-amber-500 ${
+                    currentFolder.id == folder.id
+                      ? "bg-slate-400 "
+                      : ""
+                  }`}
                 >
-                  📁{folder.name}
+                  📁{folder.name}{folder?.size}
                 </h1>
               )}
 
-              {isClickFolder && (
+              {isRightClickOnFolder && (
                 <div className=" absolute ml-40 z-20 h-40 w-30 bg-amber-500">
                   <h1
                     onClick={() => {
                       setIsClickNewFolder(true);
-                      setIsClickFolder(false);
+                      setIsRightClickOnFolder(false);
                     }}
                   >
                     New Folder
@@ -93,7 +141,7 @@ export default function ChildFolder({
                   <h1
                     onClick={() => {
                       setIsClickRenameFolder(true);
-                      setIsClickFolder(false);
+                      setIsRightClickOnFolder(false);
                     }}
                   >
                     Rename
@@ -105,6 +153,7 @@ export default function ChildFolder({
             </div>
           )}
 
+          {/* //create new folder */}
           {isClickNewFolder && (
             <div>
               📁
@@ -116,28 +165,26 @@ export default function ChildFolder({
               <button onClick={() => handleNewFolderSave(folder)}>Save</button>
             </div>
           )}
-          {folder.type === "file" && (
-            <h1 className=" w-fit m-1 flex">📄{folder.name}</h1>
+
+          {folder?.type !== "folder" && (
+            <h1
+              onClick={() => openFile(folder)}
+              className=" w-full hover:bg-orange-400 m-1 flex"
+            >
+              📄{folder?.name}
+            </h1>
           )}
           <div className=" flex justify-start pl-4">
-            {isOpen &&
-              folder.type == "folder" &&
-              folder.children.length == 0 && <div className="">Empty</div>}
+            {isFolderOpen &&
+              folder?.type === "folder" &&
+              folder?.children.length == 0 && <div className="">Empty</div>}
           </div>
         </div>
         <div>
-          {isOpen && (
-            <div>
-              {folder?.children?.map((childItem, index) => (
-                <div className=" ml-2">
-                  <ChildFolder
-                    key={index}
-                    folder={childItem}
-                    addFolder={addFolder}
-                    deleteFolder={deleteFolder}
-                    renameFolder={renameFolder}
-                  />
-                </div>
+          {isFolderOpen && (
+            <div className=" ml-2">
+              {folder?.children.map((childItem, index) => (
+                <ChildFolder key={index} folder={childItem} />
               ))}
             </div>
           )}
@@ -145,4 +192,6 @@ export default function ChildFolder({
       </div>
     </div>
   );
-}
+});
+
+export default ChildFolder;
