@@ -2,7 +2,6 @@ import React, { useRef, useState, useEffect, memo } from "react";
 import { useFolder } from "../hooks/useFolder.js";
 import { useDispatch, useSelector } from "react-redux";
 import { setCurrentFolder, toggleFolder } from "../store/folderSlice.js";
-import { Link } from "react-router-dom";
 
 const ChildFolder = memo(({ folder }) => {
   const [isRightClickOnFolder, setIsRightClickOnFolder] = useState(false);
@@ -97,6 +96,7 @@ const ChildFolder = memo(({ folder }) => {
   return (
     <div ref={closeRef} className="w-full">
       <div className={`flex flex-col justify-start`}>
+        {/* main folder list */}
         <div>
           {folder?.type === "folder" && (
             <div
@@ -104,7 +104,7 @@ const ChildFolder = memo(({ folder }) => {
               className="flex space-x-2"
             >
               {isClickRenameFolder ? (
-                <div>
+                <div className="">
                   📁
                   <input
                     className=" bg-amber-50 text-black"
@@ -116,16 +116,25 @@ const ChildFolder = memo(({ folder }) => {
                   </button>
                 </div>
               ) : (
-                <h1
+                <div
                   onClick={() => handleClickFolder(folder)}
-                  className={` w-full m-1 flex hover:bg-amber-500 ${
-                    currentFolder.id == folder.id
-                      ? "bg-slate-400 "
-                      : ""
+                  className={` w-full m-1 grid grid-cols-2 hover:bg-amber-500 ${
+                    currentFolder.id == folder.id ? "bg-slate-400 " : ""
                   }`}
                 >
-                  📁{folder.name}{folder?.size}
-                </h1>
+                  <h1 className="  text-left">📁{folder?.name}</h1>
+                  <div className="">
+                    {folder?.size < 1024000
+                      ? (folder?.size / 1024)
+                          .toFixed(2)
+                          .toString()
+                          .concat(" KB")
+                      : (folder?.size / 1024000)
+                          .toFixed(2)
+                          .toString()
+                          .concat(" MB")}
+                  </div>
+                </div>
               )}
 
               {isRightClickOnFolder && (
