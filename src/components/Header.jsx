@@ -6,7 +6,7 @@ import {
   setFolderData,
   setSortData,
 } from "../store/folderSlice.js";
-import { saveFileToDB, getAllFolders, saveFolderToDB } from "../db/indexDB.js";
+import { getAllFolders, saveFolderToDB } from "../db/indexDB.js";
 
 export default function Header() {
   const [isClickNewFolder, setIsClickNewFolder] = useState(false);
@@ -137,7 +137,7 @@ export default function Header() {
       };
 
       try {
-        await saveFileToDB(newFile);
+        //await saveFileToDB(newFile);
         addFile(folderData, newFile);
       } catch (error) {
         console.error("Error saving file:", error);
