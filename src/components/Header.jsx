@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useFolder } from "../hooks/useFolder.js";
 import {
@@ -6,11 +6,7 @@ import {
   setFolderData,
   setSortData,
 } from "../store/folderSlice.js";
-import {
-  saveFileToDB,
-  getFilesFromDB,
-  deleteFileFromDB,
-} from "../db/indexDB.js";
+import { saveFileToDB, getAllFolders, saveFolderToDB } from "../db/indexDB.js";
 
 export default function Header() {
   const [isClickNewFolder, setIsClickNewFolder] = useState(false);
@@ -29,6 +25,8 @@ export default function Header() {
   const folderData = useSelector((state) => state.folder.folderData);
 
   //console.log("c folder", currentFolder)
+
+  const uploadRef = useRef();
 
   const handleNewFolderSave = () => {
     addFolder(currentFolder, newFolderName);
@@ -83,7 +81,7 @@ export default function Header() {
     dispatch(setSortData(sortFolder(folderData, order, sortBy)));
   }, [order, sortBy]);
 
-  const addFile = (folderData, newFile) => {
+  const addFile = async (folderData, newFile) => {
     const addFileRecursive = (data) => {
       return data.map((folder) => {
         if (folder?.id === currentFolder?.id) {
@@ -107,8 +105,8 @@ export default function Header() {
 
     const updatedFolders = addFileRecursive(folderData);
     dispatch(setFolderData(updatedFolders));
-
-    localStorage.setItem("data", JSON.stringify(updatedFolders));
+    const existedFolders = await getAllFolders();
+    await saveFolderToDB({ id: existedFolders[0].id, data: updatedFolders });
 
     setNewFolderName("");
   };
@@ -154,7 +152,7 @@ export default function Header() {
   };
 
   return (
-    <div>
+    <div className=" bg-slate-500 flex justify-between items-center p-2">
       <button onClick={() => setIsClickNewFolder(true)}>New Folder</button>
       {isClickNewFolder && (
         <div>
@@ -175,12 +173,38 @@ export default function Header() {
         className=" bg-blue-50 text-black"
       />
       <div className=" space-x-2">
-        <button onClick={() => setOrder("asc")}>asc</button>
-        <button onClick={() => setOrder("dsc")}>dsc</button>
-        <button onClick={() => setSortBy("date")}>date</button>
-        <button onClick={() => setSortBy("size")}>size</button>
+        <input
+          type="radio"
+          name="order"
+          value="asc"
+          onChange={(e) => setOrder(e.target.value)}
+          checked
+        />
+        <label>ASC</label>
+        <input
+          type="radio"
+          name="order"
+          value="dsc"
+          onChange={(e) => setOrder(e.target.value)}
+        />
+        <label>DSC</label>
+
+        <select
+          onChange={(e) => setSortBy(e.target.value)}
+          className=" bg-slate-500"
+        >
+          <option value="name">Name</option>
+          <option value="date">Date</option>
+          <option value="size">Size</option>
+        </select>
       </div>
-      <input type="file" onChange={handleFileUpload} />
+      <button onClick={() => uploadRef.current.click()}>Upload</button>
+      <input
+        className=" hidden"
+        ref={uploadRef}
+        type="file"
+        onChange={handleFileUpload}
+      />
     </div>
   );
 }
