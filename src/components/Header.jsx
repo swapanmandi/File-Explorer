@@ -14,7 +14,7 @@ export default function Header() {
   const [query, setQuery] = useState("");
   const [order, setOrder] = useState("asc");
   const [sortBy, setSortBy] = useState("");
-
+  
   //console.log("q", query);
   //console.log(files);
 
@@ -23,8 +23,6 @@ export default function Header() {
   const { addFolder, calculateFolderSize } = useFolder();
   const currentFolder = useSelector((state) => state.folder.currentFolder);
   const folderData = useSelector((state) => state.folder.folderData);
-
-  //console.log("c folder", currentFolder)
 
   const uploadRef = useRef();
 
@@ -205,6 +203,7 @@ export default function Header() {
         type="file"
         onChange={handleFileUpload}
       />
+      
     </div>
   );
 }
