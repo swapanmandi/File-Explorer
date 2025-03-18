@@ -9,16 +9,18 @@ const ChildFolder = memo(({ folder }) => {
   const [isClickRenameFolder, setIsClickRenameFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [renameFolderName, setRenameFolderName] = useState("");
+  const [isRightClickOnFile, setIsRightClickOnFile] = useState(false);
 
   const currentFolder = useSelector((state) => state.folder.currentFolder);
   const openFolders = useSelector((state) => state.folder.openFolders);
 
   const closeRef = useRef();
-  //console.log("cf", currentFolder)
+
+  console.log("o f", openFolders)
 
   const dispatch = useDispatch();
 
-  const { addFolder, renameFolder, deleteFolder } = useFolder();
+  const { addFolder, renameFolder, deleteItem } = useFolder();
 
   // if (!folder || Object.keys(folder).length === 0) {
   //   return <div className="text-white">Loading...</div>;
@@ -32,6 +34,8 @@ const ChildFolder = memo(({ folder }) => {
 
   const isFolderOpen = openFolders.includes(folder?.id);
 
+  console.log(isFolderOpen)
+
   const handleRightClickFolder = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -44,7 +48,7 @@ const ChildFolder = memo(({ folder }) => {
     setIsClickNewFolder(false);
   };
   const handleDeleteFolder = (data) => {
-    deleteFolder(data);
+    deleteItem(data);
   };
 
   const handleRenameFolderSave = (data) => {
@@ -91,8 +95,18 @@ const ChildFolder = memo(({ folder }) => {
     }
   };
 
-  //console.log("folder", folder)
- 
+
+  const handleRightClickOnFile = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsRightClickOnFolder(false);
+  setIsRightClickOnFile(!isRightClickOnFile);
+  }
+
+ const handleDeleteFile = (file) => {
+  deleteItem(file);
+    
+  }
 
   return (
     <div ref={closeRef} className="w-full">
@@ -177,7 +191,8 @@ const ChildFolder = memo(({ folder }) => {
           )}
 
           {folder?.type !== "folder" && (
-            <div className="grid grid-cols-2">
+            <div>
+            <div onContextMenu={handleRightClickOnFile} className="grid grid-cols-2">
               <h1
                 onClick={() => openFile(folder)}
                 className=" w-full hover:bg-orange-400 m-1 flex"
@@ -193,7 +208,16 @@ const ChildFolder = memo(({ folder }) => {
                       .concat(" MB")}
               </div>
             </div>
+             {isRightClickOnFile && (
+              <div className=" absolute ml-40 z-20 h-40 w-30 bg-amber-500">
+  
+
+                <h1 onClick={() => handleDeleteFile(folder)}>Delete</h1>
+              </div>
+            )}
+            </div>
           )}
+         
           <div className=" flex justify-start pl-4">
             {isFolderOpen &&
               folder?.type === "folder" &&
