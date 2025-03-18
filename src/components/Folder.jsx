@@ -1,124 +1,51 @@
-import React, { useEffect, useState } from "react";
+import React, { memo, useEffect, useState } from "react";
 import ChildFolder from "./ChildFolder";
+import { useDispatch, useSelector } from "react-redux";
+import { setFolderData } from "../store/folderSlice.js";
+import { getAllFolders } from "../db/indexDB.js";
 
-export default function Folder() {
-  const [folderData, setFolderData] = useState([
-    {
-      name: "Documents",
-      type: "folder",
-      children: [
-        {
-          name: "PDF",
-          type: "folder",
-          children: [
-            {
-              name: "book.pdf",
-              type: "file",
-              children: [],
-            },
-          ],
-        },
-        {
-          name: "react.txt",
-          type: "file",
-          children: [],
-        },
-      ],
-    },
-    {
-      name: "Downloads",
-      type: "folder",
-      children: [
-        {
-          name: "image.jpeg",
-          type: "file",
-          children: [],
-        },
-      ],
-    },
-    {
-      name: "Videos",
-      type: "folder",
-      children: [],
-    },
-    {
-      name: "nextJs.mp4",
-      type: "file",
-      children: [],
-    },
-  ]);
+ function Folder() {
+  const [getFolders, setGetFolders] = useState([]);
+  const dispatch = useDispatch();
+  const folderData = useSelector((state) => state.folder.folderData);
+  const searchData = useSelector((state) => state.folder.searchData);
+  const sortData = useSelector((state) => state.folder.sortData);
+
+  //console.log(searchData);
 
   useEffect(() => {
-    const localStorageData = JSON.parse(localStorage.getItem("data"));
-    if (localStorageData?.length > 0) setFolderData(localStorageData);
+    const getFolders = async () => {
+      const getIndexDbFolders = await getAllFolders();
+      //console.log(getIndexDbFolders[0].data);
+      if (getIndexDbFolders[0].data) {
+        dispatch(setFolderData(getIndexDbFolders[0].data));
+      }
+    };
+
+    getFolders();
   }, []);
 
-  const addFolder = (parentFolder, newFolderName) => {
-    const createFolder = { name: newFolderName, type: "folder", children: [] };
+  if (!folderData || folderData.length === 0) {
+    return (
+      <div className="text-white text-center p-3">No folders available</div>
+    );
+  }
 
-    const updatedFolders = (folders) => {
-      return folders.map((folder) => {
-        if (folder == parentFolder) {
-          return { ...folder, children: [...folder.children, createFolder] };
-        } else if (folder?.children?.length > 0) {
-          return { ...folder, children: updatedFolders(folder.children) };
-        }
-        return folder;
-      });
-    };
-    setFolderData(updatedFolders(folderData));
-    localStorage.setItem("data", JSON.stringify(updatedFolders(folderData)));
-  };
-
-  const deleteFolder = (folderToDelete) => {
-    const updatedFolders = (folders) => {
-      return folders
-        .filter((folder) => folder.name !== folderToDelete.name)
-        .map((folder) => {
-          if (folder?.children?.length > 0) {
-            return { ...folder, children: updatedFolders(folder.children) };
-          }
-          return folder;
-        });
-    };
-
-    const updatedData = updatedFolders(folderData);
-    setFolderData(updatedData);
-    localStorage.setItem("data", JSON.stringify(updatedData));
-  };
-
-  const renameFolder = (folderToRename, newFolderName) => {
-    const updatedFolders = (folders) => {
-      return folders.map((folder) => {
-        // Check if this is the folder to rename
-        if (folder.name === folderToRename.name) {
-          return { ...folder, name: newFolderName }; // Update the folder name
-        } else if (folder?.children?.length > 0) {
-          // If the folder has children, recursively call updatedFolders
-          return { ...folder, children: updatedFolders(folder.children) };
-        }
-        return folder;
-      });
-    };
-
-    const updatedData = updatedFolders(folderData);
-    setFolderData(updatedData);
-    localStorage.setItem("data", JSON.stringify(updatedData));
-  };
+  const folders =
+    searchData.length > 0
+      ? searchData
+      : sortData.length > 0
+      ? sortData
+      : folderData;
 
   return (
-    <div className=" bg-amber-200 place-self-center">
-      <div>
-        {folderData?.map((data, index) => (
-          <ChildFolder
-            key={index}
-            folder={data}
-            addFolder={addFolder}
-            deleteFolder={deleteFolder}
-            renameFolder={renameFolder}
-          />
-        ))}
-      </div>
+    <div className=" bg-slate-900 place-self-center rounded-md w-full lg:w-[60dvw] p-3 min-h-[80dvh]">
+      {folders.map((data, index) => (
+        <ChildFolder key={index} folder={data} />
+      ))}
     </div>
   );
 }
+
+
+export default React.memo(Folder)
