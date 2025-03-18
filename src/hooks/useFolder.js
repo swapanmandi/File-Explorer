@@ -5,6 +5,7 @@ import {saveFolderToDB, getAllFolders, deleteAllFolders} from "../db/indexDB.js"
 export const useFolder = () => {
   const dispatch = useDispatch();
   const folderData = useSelector((state) => state.folder.folderData);
+  const isSelect  = useSelector((state) => state.folder.isSelect)
 
   const calculateFolderSize = (folder) => {
     if (!folder?.children || folder?.children.length === 0) return 0;
@@ -57,19 +58,26 @@ export const useFolder = () => {
 
 
 
-  const deleteItem = async(fileToDelete) => {
-    const updatedFolders = (folders) => {
-      return folders
-        .filter((folder) => folder?.id !== fileToDelete?.id)
-        .map((folder) => {
-          if (folder?.children?.length > 0) {
-            return { ...folder, children: updatedFolders(folder.children) };
-          }
-          return folder;
-        });
+  const deleteItem = async(deleteItems) => {
+
+    //console.log("d i", deleteItems)
+
+    const deleteItemsSet = new Set(deleteItems.map(item => item))
+
+    const updatedItems = (folders) => {
+      return folders.reduce((acc, item) => {
+        if(deleteItemsSet.has(item.id)) return acc;
+
+        const updatedItem = {...item};
+        if(item.children?.length){
+          updatedItem.children = updatedItems(item.children)
+        }
+        acc.push(updatedItem)
+        return acc;
+      }, [])
     };
 
-    const updatedData = updatedFolders(folderData);
+    const updatedData = await updatedItems(folderData);
     dispatch(setFolderData(updatedData));
     const existedFolder = await getAllFolders()
    
@@ -94,6 +102,11 @@ export const useFolder = () => {
     dispatch(setFolderData(updatedData));
     localStorage.setItem("data", JSON.stringify(updatedData));
   };
+
+
+  const selectItem  = ()=>{
+    
+  }
 
   return { addFolder, renameFolder, deleteItem, calculateFolderSize, };
 };

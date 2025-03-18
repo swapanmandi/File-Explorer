@@ -6,6 +6,8 @@ const initialState = {
   searchData: [],
   sortData: [],
   openFolders: [],
+  isSelect: false,
+  selectedItems:[],
 };
 
 export const folderSlice = createSlice({
@@ -38,6 +40,12 @@ export const folderSlice = createSlice({
         state.openFolders.push(id);
       }
     },
+    setIsSelect: (state, action) => {
+      state.isSelect = action.payload;
+    },
+    setSelectedItems : (state, action) => {
+      state.selectedItems = action.payload;
+    }
   },
 });
 
@@ -47,5 +55,7 @@ export const {
   setSearchData,
   setSortData,
   toggleFolder,
+  setIsSelect,
+  setSelectedItems
 } = folderSlice.actions;
 export default folderSlice.reducer;

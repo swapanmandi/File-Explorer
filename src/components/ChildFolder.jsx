@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, memo } from "react";
 import { useFolder } from "../hooks/useFolder.js";
 import { useDispatch, useSelector } from "react-redux";
-import { setCurrentFolder, toggleFolder } from "../store/folderSlice.js";
+import { setCurrentFolder, setSelectedItems, toggleFolder } from "../store/folderSlice.js";
 
 const ChildFolder = memo(({ folder }) => {
   const [isRightClickOnFolder, setIsRightClickOnFolder] = useState(false);
@@ -13,10 +13,14 @@ const ChildFolder = memo(({ folder }) => {
 
   const currentFolder = useSelector((state) => state.folder.currentFolder);
   const openFolders = useSelector((state) => state.folder.openFolders);
+  const isSelect  = useSelector((state) => state.folder.isSelect)
+  const selectedItems = useSelector((state)=> state.folder.selectedItems)
+
+ //console.log(selectedItems)
 
   const closeRef = useRef();
 
-  console.log("o f", openFolders)
+  
 
   const dispatch = useDispatch();
 
@@ -34,7 +38,7 @@ const ChildFolder = memo(({ folder }) => {
 
   const isFolderOpen = openFolders.includes(folder?.id);
 
-  console.log(isFolderOpen)
+  //console.log(isFolderOpen)
 
   const handleRightClickFolder = (e) => {
     e.preventDefault();
@@ -47,8 +51,8 @@ const ChildFolder = memo(({ folder }) => {
     addFolder(parentFolder, newFolderName);
     setIsClickNewFolder(false);
   };
-  const handleDeleteFolder = (data) => {
-    deleteItem(data);
+  const handleDeleteFolder = async (data) => {
+    await deleteItem([data.id]);
   };
 
   const handleRenameFolderSave = (data) => {
@@ -103,9 +107,21 @@ const ChildFolder = memo(({ folder }) => {
   setIsRightClickOnFile(!isRightClickOnFile);
   }
 
- const handleDeleteFile = (file) => {
-  deleteItem(file);
+ const handleDeleteFile = async (file) => {
+  await deleteItem([file.id]);
     
+  }
+
+  const onChangeSelect =(e)=>{
+    const {checked, value} = e.target;
+
+    dispatch(
+      setSelectedItems(
+        checked
+          ? [...selectedItems, value]
+          : selectedItems.filter((item) => item !== value)
+      )
+    );
   }
 
   return (
@@ -137,7 +153,11 @@ const ChildFolder = memo(({ folder }) => {
                     currentFolder.id == folder.id ? "bg-slate-400 " : ""
                   }`}
                 >
+                  <div className="flex">
+                    {isSelect && <input type="checkbox" value={folder.id} checked={selectedItems?.includes(folder?.id)}  onChange={onChangeSelect}></input>}
+                
                   <h1 className="  text-left">📁{folder?.name}</h1>
+                  </div>
                   <div className="">
                     {folder?.size < 1024000
                       ? (folder?.size / 1024)
@@ -193,12 +213,15 @@ const ChildFolder = memo(({ folder }) => {
           {folder?.type !== "folder" && (
             <div>
             <div onContextMenu={handleRightClickOnFile} className="grid grid-cols-2">
+              <div className="flex">
+            {isSelect && <input type="checkbox" value={folder.id} checked={selectedItems.includes(folder.id)}  onChange={onChangeSelect}></input>}
               <h1
                 onClick={() => openFile(folder)}
                 className=" w-full hover:bg-orange-400 m-1 flex"
               >
                 📄{folder?.name}
               </h1>
+              </div>
               <div className="">
                 {folder?.size < 1024000
                   ? (folder?.size / 1024).toFixed(2).toString().concat(" KB")

@@ -5,6 +5,7 @@ import {
   setSearchData,
   setFolderData,
   setSortData,
+  setIsSelect,
 } from "../store/folderSlice.js";
 import { getAllFolders, saveFolderToDB } from "../db/indexDB.js";
 
@@ -14,15 +15,17 @@ export default function Header() {
   const [query, setQuery] = useState("");
   const [order, setOrder] = useState("asc");
   const [sortBy, setSortBy] = useState("");
-  
+
   //console.log("q", query);
   //console.log(files);
 
   const dispatch = useDispatch();
 
-  const { addFolder, calculateFolderSize } = useFolder();
+  const { addFolder, calculateFolderSize, deleteItem } = useFolder();
   const currentFolder = useSelector((state) => state.folder.currentFolder);
   const folderData = useSelector((state) => state.folder.folderData);
+  const isSelect = useSelector((state) => state.folder.isSelect);
+  const selectedItems = useSelector((state) => state.folder.selectedItems);
 
   const uploadRef = useRef();
 
@@ -149,61 +152,78 @@ export default function Header() {
     };
   };
 
+  const handleDeleteItems = async () => {
+    await deleteItem(selectedItems);
+  };
+
   return (
-    <div className=" bg-slate-500 flex justify-between items-center p-2">
-      <button onClick={() => setIsClickNewFolder(true)}>New Folder</button>
-      {isClickNewFolder && (
-        <div>
-          📁
+    <div>
+      {isSelect ? (
+        <div className="flex">
+          <button>COPY</button>
+          <button>PASTE</button>
+          <button>MOVE</button>
+          <button onClick={handleDeleteItems}>DELETE</button>
+        </div>
+      ) : (
+        <div className=" bg-slate-500 flex justify-between items-center p-2">
+          <button onClick={() => setIsClickNewFolder(true)}>New Folder</button>
+          {isClickNewFolder && (
+            <div>
+              📁
+              <input
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                className=" bg-amber-50 text-black"
+              ></input>
+              <button onClick={() => handleNewFolderSave()}>Save</button>
+            </div>
+          )}
+
           <input
-            value={newFolderName}
-            onChange={(e) => setNewFolderName(e.target.value)}
-            className=" bg-amber-50 text-black"
-          ></input>
-          <button onClick={() => handleNewFolderSave()}>Save</button>
+            value={query}
+            placeholder="search"
+            onChange={(e) => setQuery(e.target.value)}
+            className=" bg-blue-50 text-black"
+          />
+          <div className=" space-x-2">
+            <input
+              type="radio"
+              name="order"
+              value="asc"
+              onChange={(e) => setOrder(e.target.value)}
+              checked
+            />
+            <label>ASC</label>
+            <input
+              type="radio"
+              name="order"
+              value="dsc"
+              onChange={(e) => setOrder(e.target.value)}
+            />
+            <label>DSC</label>
+
+            <select
+              onChange={(e) => setSortBy(e.target.value)}
+              className=" bg-slate-500"
+            >
+              <option value="name">Name</option>
+              <option value="date">Date</option>
+              <option value="size">Size</option>
+            </select>
+          </div>
+          <button onClick={() => uploadRef.current.click()}>Upload</button>
+          <input
+            className=" hidden"
+            ref={uploadRef}
+            type="file"
+            onChange={handleFileUpload}
+          />
+          <button onClick={() => dispatch(setIsSelect(!isSelect))}>
+            Slect
+          </button>
         </div>
       )}
-
-      <input
-        value={query}
-        placeholder="search"
-        onChange={(e) => setQuery(e.target.value)}
-        className=" bg-blue-50 text-black"
-      />
-      <div className=" space-x-2">
-        <input
-          type="radio"
-          name="order"
-          value="asc"
-          onChange={(e) => setOrder(e.target.value)}
-          checked
-        />
-        <label>ASC</label>
-        <input
-          type="radio"
-          name="order"
-          value="dsc"
-          onChange={(e) => setOrder(e.target.value)}
-        />
-        <label>DSC</label>
-
-        <select
-          onChange={(e) => setSortBy(e.target.value)}
-          className=" bg-slate-500"
-        >
-          <option value="name">Name</option>
-          <option value="date">Date</option>
-          <option value="size">Size</option>
-        </select>
-      </div>
-      <button onClick={() => uploadRef.current.click()}>Upload</button>
-      <input
-        className=" hidden"
-        ref={uploadRef}
-        type="file"
-        onChange={handleFileUpload}
-      />
-      
     </div>
   );
 }
