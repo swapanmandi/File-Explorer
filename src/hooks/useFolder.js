@@ -1,5 +1,6 @@
 import { useDispatch, useSelector } from "react-redux";
 import { setFolderData } from "../store/folderSlice.js";
+import {saveFolderToDB, getAllFolders, deleteAllFolders} from "../db/indexDB.js"
 
 export const useFolder = () => {
   const dispatch = useDispatch();
@@ -18,7 +19,7 @@ export const useFolder = () => {
     }, 0);
   };
 
-  const addFolder = (parentFolder, newFolderName) => {
+  const addFolder = async (parentFolder, newFolderName) => {
     //console.log("p id-", parentFolder.id)
     const createFolder = {
       id: crypto.randomUUID() || Date.now(),
@@ -28,6 +29,7 @@ export const useFolder = () => {
       modifyDate: new Date(),
       content: "",
       size: "",
+      parent:parentFolder.id || new Date(),
       children: [],
     };
 
@@ -46,14 +48,19 @@ export const useFolder = () => {
     };
 
     const updatedFolders = addFolderRecursive(folderData);
+    const existedFolder = await getAllFolders()
+   
+    await saveFolderToDB({id:existedFolder[0].id, data:updatedFolders})
     dispatch(setFolderData(updatedFolders));
-    localStorage.setItem("data", JSON.stringify(updatedFolders));
+   
   };
 
-  const deleteFolder = (folderToDelete) => {
+
+
+  const deleteItem = async(fileToDelete) => {
     const updatedFolders = (folders) => {
       return folders
-        .filter((folder) => folder.name !== folderToDelete.name)
+        .filter((folder) => folder?.id !== fileToDelete?.id)
         .map((folder) => {
           if (folder?.children?.length > 0) {
             return { ...folder, children: updatedFolders(folder.children) };
@@ -64,14 +71,16 @@ export const useFolder = () => {
 
     const updatedData = updatedFolders(folderData);
     dispatch(setFolderData(updatedData));
-    localStorage.setItem("data", JSON.stringify(updatedData));
+    const existedFolder = await getAllFolders()
+   
+    await saveFolderToDB({id:existedFolder[0].id, data:updatedData})
   };
 
   const renameFolder = (folderToRename, newFolderName) => {
     const updatedFolders = (folders) => {
       return folders.map((folder) => {
         // Check if this is the folder to rename
-        if (folder.name === folderToRename.name) {
+        if (folder?.id === folderToRename?.id) {
           return { ...folder, name: newFolderName }; // Update the folder name
         } else if (folder?.children?.length > 0) {
           // If the folder has children, recursively call updatedFolders
@@ -86,5 +95,5 @@ export const useFolder = () => {
     localStorage.setItem("data", JSON.stringify(updatedData));
   };
 
-  return { addFolder, renameFolder, deleteFolder, calculateFolderSize };
+  return { addFolder, renameFolder, deleteItem, calculateFolderSize, };
 };
