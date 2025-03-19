@@ -6,6 +6,10 @@ import {
   setFolderData,
   setSortData,
   setIsSelect,
+  setSelectedItems,
+  closeAllOpenFolders,
+  setIsClickCopy,
+  setIsClickMove,
 } from "../store/folderSlice.js";
 import { getAllFolders, saveFolderToDB } from "../db/indexDB.js";
 
@@ -16,16 +20,20 @@ export default function Header() {
   const [order, setOrder] = useState("asc");
   const [sortBy, setSortBy] = useState("");
 
-  //console.log("q", query);
-  //console.log(files);
+
 
   const dispatch = useDispatch();
 
-  const { addFolder, calculateFolderSize, deleteItem } = useFolder();
+  const { addFolder, calculateFolderSize, deleteItem, moveItem, copyItem } =
+    useFolder();
   const currentFolder = useSelector((state) => state.folder.currentFolder);
   const folderData = useSelector((state) => state.folder.folderData);
   const isSelect = useSelector((state) => state.folder.isSelect);
   const selectedItems = useSelector((state) => state.folder.selectedItems);
+  const isClickCopy = useSelector((state) => state.folder.isClickCopy);
+  const isClickMove = useSelector((state) => state.folder.isClickMove);
+
+    console.log("select otems", selectedItems);
 
   const uploadRef = useRef();
 
@@ -156,14 +164,51 @@ export default function Header() {
     await deleteItem(selectedItems);
   };
 
+  const handleClickOnMove = () => {
+    dispatch(setIsClickMove(true));
+    dispatch(setIsSelect(false));
+    dispatch(closeAllOpenFolders([]));
+  };
+  const handleMoveItem = () => {
+    moveItem(selectedItems, currentFolder);
+    dispatch(setIsClickMove(false));
+    dispatch(setSelectedItems([]));
+  };
+
+  const handleClickOnCopy = () => {
+    dispatch(setIsClickCopy(true));
+    dispatch(setIsSelect(false));
+    dispatch(closeAllOpenFolders([]));
+  };
+  const handleCopyItem = () => {
+    copyItem(selectedItems, currentFolder);
+    dispatch(setIsClickCopy(false));
+    dispatch(setSelectedItems([]));
+  };
+
+  const handleCancelSelect = () => {
+    dispatch(setIsSelect(false));
+    dispatch(setIsClickCopy(false));
+    dispatch(setIsClickMove(false));
+    dispatch(setSelectedItems([]));
+  };
+
   return (
     <div>
-      {isSelect ? (
-        <div className="flex">
-          <button>COPY</button>
-          <button>PASTE</button>
-          <button>MOVE</button>
-          <button onClick={handleDeleteItems}>DELETE</button>
+      {isSelect || selectedItems.length > 0 ? (
+        <div className="flex gap-2">
+          {!isClickCopy && !isClickMove && (
+            <>
+              <button onClick={handleClickOnCopy}>COPY</button>
+              <button onClick={handleClickOnMove}>MOVE</button>
+            </>
+          )}
+          {isClickCopy && <button onClick={handleCopyItem}>PASTE</button>}
+          {isClickMove && <button onClick={handleMoveItem}>MOVE</button>}
+          {!isClickCopy && !isClickMove && (
+            <button onClick={handleDeleteItems}>DELETE</button>
+          )}
+          <button onClick={handleCancelSelect}>CANCEL</button>
         </div>
       ) : (
         <div className=" bg-slate-500 flex justify-between items-center p-2">
