@@ -135,9 +135,10 @@ export const useFolder = () => {
   };
 
   const moveItem = async (items, parentFolder) => {
+    console.log("items", items)
     const moveItems = folderData
       .filter((item) => items.includes(item.id))
-      .map((item) => ({ ...item, id: Date.now() }));
+      .map((item) => ({ ...item, id: crypto.randomUUID() }));
 
 
     const addFolderRecursive = (folders) => {
