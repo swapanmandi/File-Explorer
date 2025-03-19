@@ -1,7 +1,14 @@
 import React, { useRef, useState, useEffect, memo } from "react";
 import { useFolder } from "../hooks/useFolder.js";
 import { useDispatch, useSelector } from "react-redux";
-import { setCurrentFolder, setSelectedItems, toggleFolder } from "../store/folderSlice.js";
+import {
+  setCurrentFolder,
+  setSelectedItems,
+  toggleFolder,
+  setIsClickCopy,
+  setIsClickMove,
+  closeAllOpenFolders,
+} from "../store/folderSlice.js";
 
 const ChildFolder = memo(({ folder }) => {
   const [isRightClickOnFolder, setIsRightClickOnFolder] = useState(false);
@@ -13,14 +20,12 @@ const ChildFolder = memo(({ folder }) => {
 
   const currentFolder = useSelector((state) => state.folder.currentFolder);
   const openFolders = useSelector((state) => state.folder.openFolders);
-  const isSelect  = useSelector((state) => state.folder.isSelect)
-  const selectedItems = useSelector((state)=> state.folder.selectedItems)
+  const isSelect = useSelector((state) => state.folder.isSelect);
+  const selectedItems = useSelector((state) => state.folder.selectedItems);
 
- //console.log(selectedItems)
+  //console.log(selectedItems)
 
   const closeRef = useRef();
-
-  
 
   const dispatch = useDispatch();
 
@@ -99,21 +104,19 @@ const ChildFolder = memo(({ folder }) => {
     }
   };
 
-
   const handleRightClickOnFile = (e) => {
     e.preventDefault();
     e.stopPropagation();
     setIsRightClickOnFolder(false);
-  setIsRightClickOnFile(!isRightClickOnFile);
-  }
+    setIsRightClickOnFile(!isRightClickOnFile);
+  };
 
- const handleDeleteFile = async (file) => {
-  await deleteItem([file.id]);
-    
-  }
+  const handleDeleteFile = async (file) => {
+    await deleteItem([file.id]);
+  };
 
-  const onChangeSelect =(e)=>{
-    const {checked, value} = e.target;
+  const onChangeSelect = (e) => {
+    const { checked, value } = e.target;
 
     dispatch(
       setSelectedItems(
@@ -122,7 +125,23 @@ const ChildFolder = memo(({ folder }) => {
           : selectedItems.filter((item) => item !== value)
       )
     );
-  }
+  };
+
+  const handleClickOnCopy = (id) => {
+    dispatch(setSelectedItems([id]))
+    dispatch(setIsClickCopy(true));
+    dispatch(setIsClickMove(false));
+    dispatch(closeAllOpenFolders([]));
+    setIsRightClickOnFolder(false)
+  };
+
+  const handleClickOnMove = (id) => {
+    dispatch(setSelectedItems([id]))
+    dispatch(setIsClickMove(true));
+    dispatch(setIsClickCopy(false));
+    dispatch(closeAllOpenFolders([]));
+    setIsRightClickOnFolder(false)
+  };
 
   return (
     <div ref={closeRef} className="w-full">
@@ -147,27 +166,36 @@ const ChildFolder = memo(({ folder }) => {
                   </button>
                 </div>
               ) : (
-                <div
-                  onClick={() => handleClickFolder(folder)}
-                  className={` w-full m-1 grid grid-cols-2 hover:bg-amber-500 ${
-                    currentFolder.id == folder.id ? "bg-slate-400 " : ""
-                  }`}
-                >
-                  <div className="flex">
-                    {isSelect && <input type="checkbox" value={folder.id} checked={selectedItems?.includes(folder?.id)}  onChange={onChangeSelect}></input>}
-                
-                  <h1 className="  text-left">📁{folder?.name}</h1>
+                <div className=" w-full flex">
+                  <div>
+                    {isSelect && (
+                      <input
+                        type="checkbox"
+                        value={folder.id}
+                        checked={selectedItems.includes(folder.id)}
+                        onChange={onChangeSelect}
+                      ></input>
+                    )}
                   </div>
-                  <div className="">
-                    {folder?.size < 1024000
-                      ? (folder?.size / 1024)
-                          .toFixed(2)
-                          .toString()
-                          .concat(" KB")
-                      : (folder?.size / 1024000)
-                          .toFixed(2)
-                          .toString()
-                          .concat(" MB")}
+                  <div
+                    onClick={() => handleClickFolder(folder)}
+                    className={` w-full m-1 grid grid-cols-2 hover:bg-amber-500 ${
+                      currentFolder.id == folder.id ? "bg-slate-400 " : ""
+                    }`}
+                  >
+                    <h1 className="  text-left">📁{folder?.name}</h1>
+
+                    <div className="">
+                      {folder?.size < 1024000
+                        ? (folder?.size / 1024)
+                            .toFixed(2)
+                            .toString()
+                            .concat(" KB")
+                        : (folder?.size / 1024000)
+                            .toFixed(2)
+                            .toString()
+                            .concat(" MB")}
+                    </div>
                   </div>
                 </div>
               )}
@@ -192,6 +220,8 @@ const ChildFolder = memo(({ folder }) => {
                   </h1>
 
                   <h1 onClick={() => handleDeleteFolder(folder)}>Delete</h1>
+                  <h1 onClick={()=>handleClickOnCopy(folder.id)}>Copy</h1>
+                  <h1 onClick={()=>handleClickOnMove(folder.id)}>Move</h1>
                 </div>
               )}
             </div>
@@ -212,35 +242,43 @@ const ChildFolder = memo(({ folder }) => {
 
           {folder?.type !== "folder" && (
             <div>
-            <div onContextMenu={handleRightClickOnFile} className="grid grid-cols-2">
-              <div className="flex">
-            {isSelect && <input type="checkbox" value={folder.id} checked={selectedItems.includes(folder.id)}  onChange={onChangeSelect}></input>}
-              <h1
-                onClick={() => openFile(folder)}
-                className=" w-full hover:bg-orange-400 m-1 flex"
+              <div
+                onContextMenu={handleRightClickOnFile}
+                className="grid grid-cols-2"
               >
-                📄{folder?.name}
-              </h1>
+                <div className="flex">
+                  {isSelect && (
+                    <input
+                      type="checkbox"
+                      value={folder.id}
+                      checked={selectedItems.includes(folder.id)}
+                      onChange={onChangeSelect}
+                    ></input>
+                  )}
+                  <h1
+                    onClick={() => openFile(folder)}
+                    className=" w-full hover:bg-orange-400 m-1 flex"
+                  >
+                    📄{folder?.name}
+                  </h1>
+                </div>
+                <div className="">
+                  {folder?.size < 1024000
+                    ? (folder?.size / 1024).toFixed(2).toString().concat(" KB")
+                    : (folder?.size / 1024000)
+                        .toFixed(2)
+                        .toString()
+                        .concat(" MB")}
+                </div>
               </div>
-              <div className="">
-                {folder?.size < 1024000
-                  ? (folder?.size / 1024).toFixed(2).toString().concat(" KB")
-                  : (folder?.size / 1024000)
-                      .toFixed(2)
-                      .toString()
-                      .concat(" MB")}
-              </div>
-            </div>
-             {isRightClickOnFile && (
-              <div className=" absolute ml-40 z-20 h-40 w-30 bg-amber-500">
-  
-
-                <h1 onClick={() => handleDeleteFile(folder)}>Delete</h1>
-              </div>
-            )}
+              {isRightClickOnFile && (
+                <div className=" absolute ml-40 z-20 h-40 w-30 bg-amber-500">
+                  <h1 onClick={() => handleDeleteFile(folder)}>Delete</h1>
+                </div>
+              )}
             </div>
           )}
-         
+
           <div className=" flex justify-start pl-4">
             {isFolderOpen &&
               folder?.type === "folder" &&
