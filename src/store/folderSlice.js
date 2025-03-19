@@ -7,7 +7,9 @@ const initialState = {
   sortData: [],
   openFolders: [],
   isSelect: false,
-  selectedItems:[],
+  selectedItems: [],
+  isClickCopy: false,
+  isClickMove: false
 };
 
 export const folderSlice = createSlice({
@@ -33,18 +35,25 @@ export const folderSlice = createSlice({
     toggleFolder: (state, action) => {
       const id = action.payload;
       if (state.openFolders.includes(id)) {
-        state.openFolders = state.openFolders.filter(
-          (item) => item !== id
-        );
+        state.openFolders = state.openFolders.filter((item) => item !== id);
       } else {
         state.openFolders.push(id);
       }
     },
+    closeAllOpenFolders: (state, action) => {
+      state.openFolders = action.payload;
+    },
     setIsSelect: (state, action) => {
       state.isSelect = action.payload;
     },
-    setSelectedItems : (state, action) => {
+    setSelectedItems: (state, action) => {
       state.selectedItems = action.payload;
+    },
+    setIsClickCopy: (state, action) =>{
+      state.isClickCopy = action.payload
+    },
+    setIsClickMove: (state, action)=>{
+      state.isClickMove = action.payload
     }
   },
 });
@@ -56,6 +65,9 @@ export const {
   setSortData,
   toggleFolder,
   setIsSelect,
-  setSelectedItems
+  setSelectedItems,
+  closeAllOpenFolders,
+  setIsClickCopy,
+  setIsClickMove
 } = folderSlice.actions;
 export default folderSlice.reducer;
