@@ -20,8 +20,6 @@ export default function Header() {
   const [order, setOrder] = useState("asc");
   const [sortBy, setSortBy] = useState("");
 
-
-
   const dispatch = useDispatch();
 
   const { addFolder, calculateFolderSize, deleteItem, moveItem, copyItem } =
@@ -33,7 +31,7 @@ export default function Header() {
   const isClickCopy = useSelector((state) => state.folder.isClickCopy);
   const isClickMove = useSelector((state) => state.folder.isClickMove);
 
-    console.log("select otems", selectedItems);
+  //console.log("select otems", selectedItems);
 
   const uploadRef = useRef();
 
@@ -70,7 +68,7 @@ export default function Header() {
       return [...data]
         .map((folder) => ({
           ...folder,
-          children: folder?.children ? sortFolder(folder.children, order) : [],
+          children: folder?.children ? sortFolder(folder.children, order, sortBy) : [],
         }))
         .sort((a, b) => {
           if (sortBy === "size") {
@@ -88,7 +86,7 @@ export default function Header() {
     };
     //console.log("sd", sortFolder(folderData, order));
     dispatch(setSortData(sortFolder(folderData, order, sortBy)));
-  }, [order, sortBy]);
+  }, [folderData, order, sortBy]);
 
   const addFile = async (folderData, newFile) => {
     const addFileRecursive = (data) => {
@@ -120,6 +118,10 @@ export default function Header() {
     setNewFolderName("");
   };
 
+  const handleClickUpload = () => {
+    uploadRef.current.click();
+    setIsClickNewFolder(false);
+  };
   const handleFileUpload = (e) => {
     const uploadFile = e.target.files[0];
     if (!uploadFile) return;
@@ -140,8 +142,8 @@ export default function Header() {
         type: uploadFile.type,
         children: [],
         size: uploadFile.size,
-        createDate: new Date(),
-        modifyDate: new Date(),
+        createDate: new Date().toISOString(),
+        modifyDate: new Date().toISOString(),
         content: reader.result,
       };
 
@@ -160,8 +162,17 @@ export default function Header() {
     };
   };
 
+  const handleClickNewFolder = () => {
+    setIsClickNewFolder(true);
+  };
+
   const handleDeleteItems = async () => {
     await deleteItem(selectedItems);
+  };
+
+  const handleClickSelect = () => {
+    dispatch(setIsSelect(!isSelect));
+    setIsClickNewFolder(false);
   };
 
   const handleClickOnMove = () => {
@@ -194,81 +205,117 @@ export default function Header() {
   };
 
   return (
-    <div>
+    <div className=" bg-slate-700 grid grid-cols-3 gap-2 p-2">
       {isSelect || selectedItems.length > 0 ? (
-        <div className="flex gap-2">
+        <div className="flex justify-around text-white">
           {!isClickCopy && !isClickMove && (
             <>
-              <button onClick={handleClickOnCopy}>COPY</button>
-              <button onClick={handleClickOnMove}>MOVE</button>
+              <button
+                disabled={selectedItems.length < 1}
+                className=" disabled:text-slate-400"
+                onClick={handleClickOnCopy}
+              >
+                COPY
+              </button>
+              <button
+                disabled={selectedItems.length < 1}
+                className=" disabled:text-slate-400"
+                onClick={handleClickOnMove}
+              >
+                MOVE
+              </button>
             </>
           )}
-          {isClickCopy && <button onClick={handleCopyItem}>PASTE</button>}
+          {isClickCopy && (
+            <button
+              disabled={selectedItems.length < 1}
+              className=" disabled:text-slate-400"
+              onClick={handleCopyItem}
+            >
+              PASTE
+            </button>
+          )}
           {isClickMove && <button onClick={handleMoveItem}>MOVE</button>}
           {!isClickCopy && !isClickMove && (
-            <button onClick={handleDeleteItems}>DELETE</button>
+            <button
+              disabled={selectedItems.length < 1}
+              className=" disabled:text-slate-400"
+              onClick={handleDeleteItems}
+            >
+              DELETE
+            </button>
           )}
           <button onClick={handleCancelSelect}>CANCEL</button>
         </div>
       ) : (
-        <div className=" bg-slate-500 flex justify-between items-center p-2">
-          <button onClick={() => setIsClickNewFolder(true)}>New Folder</button>
+        <div className="flex justify-around items-center relative">
+          <div className=" w-full flex justify-around items-center">
+            <button onClick={handleClickNewFolder}>New Folder</button>
+
+            <button onClick={handleClickUpload}>Upload</button>
+            <input
+              className=" hidden"
+              ref={uploadRef}
+              type="file"
+              onChange={handleFileUpload}
+            />
+            <button onClick={handleClickSelect}>Select</button>
+          </div>
           {isClickNewFolder && (
-            <div>
+            <div className=" absolute top-10 ml-18 flex gap-4 w-full max-w-[60dvw]">
               📁
               <input
                 value={newFolderName}
                 onChange={(e) => setNewFolderName(e.target.value)}
-                className=" bg-amber-50 text-black"
-              ></input>
-              <button onClick={() => handleNewFolderSave()}>Save</button>
+                className=" bg-slate-800 p-1 rounded-sm outline-0 border-0"
+              />
+              <button className="" onClick={() => handleNewFolderSave()}>
+                Save
+              </button>
+              <button className="" onClick={() => setIsClickNewFolder(false)}>
+                Cancel
+              </button>
             </div>
           )}
-
-          <input
-            value={query}
-            placeholder="search"
-            onChange={(e) => setQuery(e.target.value)}
-            className=" bg-blue-50 text-black"
-          />
-          <div className=" space-x-2">
-            <input
-              type="radio"
-              name="order"
-              value="asc"
-              onChange={(e) => setOrder(e.target.value)}
-              checked
-            />
-            <label>ASC</label>
-            <input
-              type="radio"
-              name="order"
-              value="dsc"
-              onChange={(e) => setOrder(e.target.value)}
-            />
-            <label>DSC</label>
-
-            <select
-              onChange={(e) => setSortBy(e.target.value)}
-              className=" bg-slate-500"
-            >
-              <option value="name">Name</option>
-              <option value="date">Date</option>
-              <option value="size">Size</option>
-            </select>
-          </div>
-          <button onClick={() => uploadRef.current.click()}>Upload</button>
-          <input
-            className=" hidden"
-            ref={uploadRef}
-            type="file"
-            onChange={handleFileUpload}
-          />
-          <button onClick={() => dispatch(setIsSelect(!isSelect))}>
-            Slect
-          </button>
         </div>
       )}
+
+      <input
+        value={query}
+        placeholder="search"
+        onChange={(e) => setQuery(e.target.value)}
+        className=" bg-slate-800  outline-0 border-0 rounded-md h-8 px-2"
+      />
+      <div className="flex justify-around items-center">
+      <label>
+        <input
+          type="radio"
+          name="order"
+          value="asc"
+          onChange={(e) => setOrder(e.target.value)}
+          checked = {order === "asc"}
+        />
+       ASC</label>
+       <label>
+        <input
+          type="radio"
+          name="order"
+          value="dsc"
+          checked={order === "dsc"}
+          onChange={(e) => setOrder(e.target.value)}
+        />
+       DSC</label>
+
+        <select
+          onChange={(e) => setSortBy(e.target.value)}
+          value={sortBy}
+          className=" bg-slate-700 outline-0 border-0"
+        >
+          <option value="name">Name</option>
+          <option value="date">Date</option>
+          <option value="size">Size</option>
+        </select>
+      </div>
     </div>
   );
 }
