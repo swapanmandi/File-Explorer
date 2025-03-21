@@ -23,8 +23,6 @@ const ChildFolder = memo(({ folder }) => {
   const isSelect = useSelector((state) => state.folder.isSelect);
   const selectedItems = useSelector((state) => state.folder.selectedItems);
 
-  //console.log(selectedItems)
-
   const closeRef = useRef();
 
   const dispatch = useDispatch();
@@ -128,19 +126,28 @@ const ChildFolder = memo(({ folder }) => {
   };
 
   const handleClickOnCopy = (id) => {
-    dispatch(setSelectedItems([id]))
+    dispatch(setSelectedItems([id]));
     dispatch(setIsClickCopy(true));
     dispatch(setIsClickMove(false));
     dispatch(closeAllOpenFolders([]));
-    setIsRightClickOnFolder(false)
+    setIsRightClickOnFolder(false);
   };
 
   const handleClickOnMove = (id) => {
-    dispatch(setSelectedItems([id]))
+    dispatch(setSelectedItems([id]));
     dispatch(setIsClickMove(true));
     dispatch(setIsClickCopy(false));
     dispatch(closeAllOpenFolders([]));
-    setIsRightClickOnFolder(false)
+    setIsRightClickOnFolder(false);
+  };
+
+  const dateFormat = () => {
+    const d = new Date().toISOString();
+    const dd = d.getDate();
+    const mm = d.getMonth();
+    const yyyy = d.getFullYear();
+    const formatedDate = new Date(`${dd} / ${mm} / ${yyyy}`);
+    return formatedDate;
   };
 
   return (
@@ -179,8 +186,8 @@ const ChildFolder = memo(({ folder }) => {
                   </div>
                   <div
                     onClick={() => handleClickFolder(folder)}
-                    className={` w-full m-1 grid grid-cols-2 hover:bg-amber-500 ${
-                      currentFolder.id == folder.id ? "bg-slate-400 " : ""
+                    className={` w-full m-1 grid grid-cols-3 p-1 gap-0.5 hover:bg-amber-500 ${
+                      isFolderOpen? "bg-slate-400 " : ""
                     }`}
                   >
                     <h1 className="  text-left">📁{folder?.name}</h1>
@@ -196,6 +203,7 @@ const ChildFolder = memo(({ folder }) => {
                             .toString()
                             .concat(" MB")}
                     </div>
+                    <div className="">{folder.createDate.toString()}</div>
                   </div>
                 </div>
               )}
@@ -220,8 +228,8 @@ const ChildFolder = memo(({ folder }) => {
                   </h1>
 
                   <h1 onClick={() => handleDeleteFolder(folder)}>Delete</h1>
-                  <h1 onClick={()=>handleClickOnCopy(folder.id)}>Copy</h1>
-                  <h1 onClick={()=>handleClickOnMove(folder.id)}>Move</h1>
+                  <h1 onClick={() => handleClickOnCopy(folder.id)}>Copy</h1>
+                  <h1 onClick={() => handleClickOnMove(folder.id)}>Move</h1>
                 </div>
               )}
             </div>
@@ -244,7 +252,8 @@ const ChildFolder = memo(({ folder }) => {
             <div>
               <div
                 onContextMenu={handleRightClickOnFile}
-                className="grid grid-cols-2"
+                onClick={() => openFile(folder)}
+                className=" w-full m-1 grid grid-cols-3 p-1 gap-0.5 hover:bg-orange-400"
               >
                 <div className="flex">
                   {isSelect && (
@@ -256,8 +265,8 @@ const ChildFolder = memo(({ folder }) => {
                     ></input>
                   )}
                   <h1
-                    onClick={() => openFile(folder)}
-                    className=" w-full hover:bg-orange-400 m-1 flex"
+      
+                    className=" w-full m-1 flex"
                   >
                     📄{folder?.name}
                   </h1>
@@ -270,6 +279,7 @@ const ChildFolder = memo(({ folder }) => {
                         .toString()
                         .concat(" MB")}
                 </div>
+                <div className="">{folder.createDate.toString()}</div>
               </div>
               {isRightClickOnFile && (
                 <div className=" absolute ml-40 z-20 h-40 w-30 bg-amber-500">
