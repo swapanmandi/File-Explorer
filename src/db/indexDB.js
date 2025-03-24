@@ -14,12 +14,26 @@ const initDB = async () => {
   });
 };
 
-export const saveFolderToDB = async (folder) => {
-  if (!folder.id) throw new Error("Folder Object Id is Missing");
-  const db = await initDB();
-  const tx = db.transaction(FOLDER_STORE, "readwrite");
-  await tx.store.put(folder);
-  await tx.done;
+export const saveFoldersToDB = async (folders) => {
+  if (!folders || folders.length === 0) return;
+
+  try {
+     await deleteAllFolders()
+      const db = await initDB();
+      const tx = db.transaction(FOLDER_STORE, "readwrite");
+      const promises = folders.map(folder => {
+          if (!folder.id) {
+              console.error("saveFoldersToDB: Folder missing id, skipped", folder);
+              return Promise.resolve();
+          }
+          return tx.store.put(folder);
+      });
+      await Promise.all(promises);
+      await tx.done;
+  } catch (error) {
+      console.error("saveFoldersToDB: Error saving folders to database:", error);
+      throw error;
+  }
 };
 
 export const getAllFolders = async () => {
