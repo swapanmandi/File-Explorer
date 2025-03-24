@@ -3,7 +3,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { useFolder } from "../hooks/useFolder.js";
 import {
   setSearchData,
-  setFolderData,
   setSortData,
   setIsSelect,
   setSelectedItems,
@@ -11,7 +10,6 @@ import {
   setIsClickCopy,
   setIsClickMove,
 } from "../store/folderSlice.js";
-import { getAllFolders, saveFolderToDB } from "../db/indexDB.js";
 
 export default function Header() {
   const [isClickNewFolder, setIsClickNewFolder] = useState(false);
@@ -22,7 +20,7 @@ export default function Header() {
 
   const dispatch = useDispatch();
 
-  const { addFolder, calculateFolderSize, deleteItem, moveItem, copyItem } =
+  const { addFolder, addFile, deleteItem, moveItem, copyItem } =
     useFolder();
   const currentFolder = useSelector((state) => state.folder.currentFolder);
   const folderData = useSelector((state) => state.folder.folderData);
@@ -32,6 +30,7 @@ export default function Header() {
   const isClickMove = useSelector((state) => state.folder.isClickMove);
 
   //console.log("select otems", selectedItems);
+  //console.log("current folder", currentFolder)
 
   const uploadRef = useRef();
 
@@ -88,35 +87,7 @@ export default function Header() {
     dispatch(setSortData(sortFolder(folderData, order, sortBy)));
   }, [folderData, order, sortBy]);
 
-  const addFile = async (folderData, newFile) => {
-    const addFileRecursive = (data) => {
-      return data.map((folder) => {
-        if (folder?.id === currentFolder?.id) {
-          const updatedChildren = [...folder.children, newFile];
-          return {
-            ...folder,
-            children: updatedChildren,
-            size: calculateFolderSize({ ...folder, children: updatedChildren }),
-          };
-        } else if (folder?.children?.length > 0) {
-          const updatedChildren = addFileRecursive(folder.children);
-          return {
-            ...folder,
-            children: updatedChildren,
-            size: calculateFolderSize({ ...folder, children: updatedChildren }),
-          };
-        }
-        return folder;
-      });
-    };
-
-    const updatedFolders = addFileRecursive(folderData);
-    dispatch(setFolderData(updatedFolders));
-    const existedFolders = await getAllFolders();
-    await saveFolderToDB({ id: existedFolders[0].id, data: updatedFolders });
-
-    setNewFolderName("");
-  };
+  
 
   const handleClickUpload = () => {
     uploadRef.current.click();
@@ -148,7 +119,6 @@ export default function Header() {
       };
 
       try {
-        //await saveFileToDB(newFile);
         addFile(folderData, newFile);
       } catch (error) {
         console.error("Error saving file:", error);
@@ -168,6 +138,8 @@ export default function Header() {
 
   const handleDeleteItems = async () => {
     await deleteItem(selectedItems);
+    dispatch(setIsSelect(false));
+    dispatch(setSelectedItems([]));
   };
 
   const handleClickSelect = () => {
@@ -287,7 +259,7 @@ export default function Header() {
         className=" bg-slate-800  outline-0 border-0 rounded-md h-8 px-2"
       />
       <div className="flex justify-around items-center">
-      <label>
+      <label className=" flex gap-2">
         <input
           type="radio"
           name="order"
@@ -296,7 +268,7 @@ export default function Header() {
           checked = {order === "asc"}
         />
        ASC</label>
-       <label>
+       <label className=" flex gap-2">
         <input
           type="radio"
           name="order"
