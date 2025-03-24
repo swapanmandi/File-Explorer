@@ -1,15 +1,11 @@
 import { useDispatch, useSelector } from "react-redux";
 import { setFolderData } from "../store/folderSlice.js";
-import {
-  saveFolderToDB,
-  getAllFolders,
-  deleteAllFolders,
-} from "../db/indexDB.js";
+import { saveFoldersToDB } from "../db/indexDB.js";
 
 export const useFolder = () => {
   const dispatch = useDispatch();
   const folderData = useSelector((state) => state.folder.folderData);
-  const isSelect = useSelector((state) => state.folder.isSelect);
+  const currentFolder = useSelector((state) => state.folder.currentFolder);
 
   const calculateFolderSize = (folder) => {
     if (!folder?.children || folder?.children.length === 0) return 0;
@@ -24,13 +20,13 @@ export const useFolder = () => {
     }, 0);
   };
 
-  const addFolder = async (parentFolder, newFolderName) => {
+  const addFolder = async (parentFolder, newItemName) => {
     const createFolder = {
       id: crypto.randomUUID() || Date.now(),
-      name: newFolderName,
+      name: newItemName,
       type: "folder",
-      createDate: new Date(),
-      modifyDate: new Date(),
+      createDate: new Date().toISOString(),
+      modifyDate: new Date().toISOString(),
       content: "",
       size: "",
       children: [],
@@ -54,145 +50,138 @@ export const useFolder = () => {
     };
 
     const updatedFolders = addFolderRecursive(folderData);
-    const existedFolder = await getAllFolders();
 
-    await saveFolderToDB({ id: existedFolder[0].id, data: updatedFolders });
+    await saveFoldersToDB(updatedFolders);
     dispatch(setFolderData(updatedFolders));
   };
 
-  const deleteItem = async (deleteItems) => {
-    //console.log("d i", deleteItems)
-
-    const deleteItemsSet = new Set(deleteItems.map((item) => item));
-
-    const updatedItems = (folders) => {
-      return folders.reduce((acc, item) => {
-        if (deleteItemsSet.has(item.id)) return acc;
-
-        const updatedItem = { ...item };
-        if (item.children?.length) {
-          updatedItem.children = updatedItems(item.children);
-        }
-        acc.push(updatedItem);
-        return acc;
-      }, []);
-    };
-
-    const updatedData = await updatedItems(folderData);
-    dispatch(setFolderData(updatedData));
-    const existedFolder = await getAllFolders();
-
-    await saveFolderToDB({ id: existedFolder[0].id, data: updatedData });
-  };
-
-  const renameFolder = (folderToRename, newFolderName) => {
-    const updatedFolders = (folders) => {
-      return folders.map((folder) => {
-        // Check if this is the folder to rename
-        if (folder?.id === folderToRename?.id) {
-          return { ...folder, name: newFolderName }; // Update the folder name
+  const addFile = async (folderData, newFile) => {
+    const addFileRecursive = (data) => {
+      return data.map((folder) => {
+        if (folder?.id === currentFolder?.id) {
+          const updatedChildren = [...folder.children, newFile];
+          return {
+            ...folder,
+            children: updatedChildren,
+            size: calculateFolderSize({ ...folder, children: updatedChildren }),
+          };
         } else if (folder?.children?.length > 0) {
-          // If the folder has children, recursively call updatedFolders
-          return { ...folder, children: updatedFolders(folder.children) };
+          const updatedChildren = addFileRecursive(folder.children);
+          return {
+            ...folder,
+            children: updatedChildren,
+            size: calculateFolderSize({ ...folder, children: updatedChildren }),
+          };
         }
         return folder;
       });
     };
 
-    const updatedData = updatedFolders(folderData);
-    dispatch(setFolderData(updatedData));
-    localStorage.setItem("data", JSON.stringify(updatedData));
+    const updatedFolders = addFileRecursive(folderData);
+    dispatch(setFolderData(updatedFolders));
+    await saveFoldersToDB(updatedFolders);
+    setNewFolderName("");
   };
 
-  const copyItem = async (items, parentFolder) => {
-    const moveItems = folderData
-      .filter((item) => items.includes(item.id))
-      .map((item) => ({ ...item, id: crypto.randomUUID() }));
+  const deleteItem = async (folderId) => {
+    const updatedFolders =
+      updateFolderRecursive(folderData, folderId[0], (folder) => null).filter(
+        Boolean
+      ) || [];
 
-    const addFolderRecursive = (folders) => {
-      if (!parentFolder?.id) return [...folders, ...moveItems];
+    dispatch(setFolderData(updatedFolders));
+    await saveFoldersToDB(updatedFolders);
+  };
 
-      return folders.map((folder) => {
-        if (folder.id === parentFolder.id) {
-          return { ...folder, children: [...folder.children, ...moveItems] };
-        }
-        if (folder.children?.length) {
-          const updatedChildren = addFolderRecursive(folder.children);
-          if (updatedChildren !== folder.children) {
-            return { ...folder, children: updatedChildren };
-          }
-        }
-        return folder;
-      });
-    };
+  const updateFolderRecursive = (folders, folderId, updateCallback) => {
+    return folders.map((folder) => {
+      if (folder.id === folderId) {
+        return updateCallback(folder);
+      }
+      if (folder.children?.length) {
+        return {
+          ...folder,
+          children: updateFolderRecursive(
+            folder.children,
+            folderId,
+            updateCallback
+          ),
+        };
+      }
+      return folder;
+    }).filter(Boolean);
+  };
 
-    const updatedFolders = addFolderRecursive(folderData);
-
-    const existedFolder = await getAllFolders();
-
-    await saveFolderToDB({ id: existedFolder[0].id, data: updatedFolders });
+  const renameItem = async (renameFolder, newName) => {
+    const updatedFolders = updateFolderRecursive(
+      folderData,
+      renameFolder.id,
+      (folder) => ({
+        ...folder,
+        name: newName,
+        modifyDate: new Date().toISOString(),
+      })
+    );
+    updatedFolders.map((item) => saveFoldersToDB(item));
     dispatch(setFolderData(updatedFolders));
   };
 
-  const moveItem = async (items, parentFolder) => {
-    console.log("items", items)
-    const moveItems = folderData
-      .filter((item) => items.includes(item.id))
-      .map((item) => ({ ...item, id: crypto.randomUUID() }));
+  const copyItem = async (folderId, newParentId) => {
+    let copiedItem = null;
 
-
-    const addFolderRecursive = (folders) => {
-      if (!parentFolder?.id) return [...folders, ...moveItems];
-
-      return folders.map((folder) => {
-        if (folder.id === parentFolder.id) {
-          return { ...folder, children: [...folder.children, ...moveItems] };
-        }
-        if (folder.children?.length) {
-          const updatedChildren = addFolderRecursive(folder.children);
-          if (updatedChildren !== folder.children) {
-            return { ...folder, children: updatedChildren };
-          }
-        }
+    const foldersWithMovedItem = updateFolderRecursive(
+      folderData,
+      folderId[0],
+      (folder) => {
+        copiedItem = { ...folder, id: crypto.randomUUID() };
         return folder;
-      });
-    };
+      }
+    );
 
-    const updatedFolders = addFolderRecursive(folderData);
+    if (!copiedItem) return;
 
-    const deleteItemsSet = new Set(items.map((item) => item));
+    const finalFolders = updateFolderRecursive(
+      foldersWithMovedItem,
+      newParentId.id,
+      (folder) => ({
+        ...folder,
+        children: [...(folder.children || []), copiedItem],
+      })
+    );
+    await saveFoldersToDB(finalFolders);
+    dispatch(setFolderData(finalFolders));
+  };
 
-    const deleteItems = (folders) => {
-      return folders.reduce((acc, item) => {
-        if (deleteItemsSet.has(item.id)) return acc;
+  const moveItem = async (folderId, newParentId) => {
+    let movedItem = null;
 
-        const updatedItem = { ...item };
-        if (item.children?.length) {
-          updatedItem.children = deleteItems(item.children);
-        }
-        acc.push(updatedItem);
-        return acc;
-      }, []);
-    };
+    const foldersWithMovedItem =
+      updateFolderRecursive(folderData, folderId[0], (folder) => {
+        movedItem = { ...folder };
+        return null;
+      }).filter(Boolean);
 
-    const updatedDeleteItems = deleteItems(updatedFolders);
+    if (!movedItem) return;
+    console.log("updated folders", foldersWithMovedItem)
 
-    const existedFolder = await getAllFolders();
-    if (!existedFolder?.length) {
-      console.error("No existing folder found to update!");
-      return;
-    }
-
-    await saveFolderToDB({ id: existedFolder[0].id, data: updatedDeleteItems });
-
-    dispatch(setFolderData(updatedDeleteItems));
+    const finalFolders = updateFolderRecursive(
+      foldersWithMovedItem,
+      newParentId.id,
+      (folder) => ({
+        ...folder,
+        children: [...(folder.children || []), movedItem],
+      })
+    );
+    console.log("final folders", finalFolders);
+    await saveFoldersToDB(finalFolders);
+    dispatch(setFolderData(finalFolders));
   };
 
   return {
     addFolder,
-    renameFolder,
+    addFile,
+    renameItem,
     deleteItem,
-    calculateFolderSize,
     moveItem,
     copyItem,
   };
