@@ -13,12 +13,11 @@ import {
 const ChildFolder = memo(({ folder }) => {
   const [isRightClickOnFolder, setIsRightClickOnFolder] = useState(false);
   const [isClickNewFolder, setIsClickNewFolder] = useState(false);
-  const [isClickRenameFolder, setIsClickRenameFolder] = useState(false);
+  const [isClickRenameItem, setIsClickRenameItem] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
-  const [renameFolderName, setRenameFolderName] = useState("");
+  const [renameItemName, setRenameItemName] = useState("");
   const [isRightClickOnFile, setIsRightClickOnFile] = useState(false);
 
-  const currentFolder = useSelector((state) => state.folder.currentFolder);
   const openFolders = useSelector((state) => state.folder.openFolders);
   const isSelect = useSelector((state) => state.folder.isSelect);
   const selectedItems = useSelector((state) => state.folder.selectedItems);
@@ -27,7 +26,7 @@ const ChildFolder = memo(({ folder }) => {
 
   const dispatch = useDispatch();
 
-  const { addFolder, renameFolder, deleteItem } = useFolder();
+  const { addFolder, renameItem, deleteItem } = useFolder();
 
   // if (!folder || Object.keys(folder).length === 0) {
   //   return <div className="text-white">Loading...</div>;
@@ -59,8 +58,8 @@ const ChildFolder = memo(({ folder }) => {
   };
 
   const handleRenameFolderSave = (data) => {
-    renameFolder(data, renameFolderName);
-    setIsClickRenameFolder(false);
+    renameItem(data, renameItemName);
+    setIsClickRenameItem(false);
   };
 
   useEffect(() => {
@@ -141,39 +140,39 @@ const ChildFolder = memo(({ folder }) => {
     setIsRightClickOnFolder(false);
   };
 
-  const dateFormat = () => {
-    const d = new Date().toISOString();
-    const dd = d.getDate();
-    const mm = d.getMonth();
-    const yyyy = d.getFullYear();
-    const formatedDate = new Date(`${dd} / ${mm} / ${yyyy}`);
-    return formatedDate;
+  const dateFormat = (d) => {
+    const date = new Date(d);
+    const dd = date.getDate();
+    const mm = date.getMonth()+1;
+    const yyyy = date.getFullYear();
+    return `${ dd <10 ? `0${dd}` : dd}.${mm <10 ? `0${mm}` : mm}.${yyyy}`;
+    
   };
 
   return (
-    <div ref={closeRef} className="w-full">
+    <div ref={closeRef} className="w-full overflow-hidden">
       <div className={`flex flex-col justify-start`}>
         {/* main folder list */}
-        <div>
-          {folder?.type === "folder" && (
+        <div className=" overflow-hidden">
+          {/* {folder?.type === "folder" && ( */}
             <div
               onContextMenu={handleRightClickFolder}
               className="flex space-x-2"
             >
-              {isClickRenameFolder ? (
+              {isClickRenameItem ? (
                 <div className="">
                   📁
                   <input
                     className=" bg-amber-50 text-black"
-                    value={renameFolderName}
-                    onChange={(e) => setRenameFolderName(e.target.value)}
+                    value={renameItemName}
+                    onChange={(e) => setRenameItemName(e.target.value)}
                   ></input>
                   <button onClick={() => handleRenameFolderSave(folder)}>
                     Save
                   </button>
                 </div>
               ) : (
-                <div className=" w-full flex">
+                <div className=" w-full flex items-center">
                   <div>
                     {isSelect && (
                       <input
@@ -190,7 +189,7 @@ const ChildFolder = memo(({ folder }) => {
                       isFolderOpen? "bg-slate-400 " : ""
                     }`}
                   >
-                    <h1 className="  text-left">📁{folder?.name}</h1>
+                    <h1 className="text-left">📁 {folder?.name}</h1>
 
                     <div className="">
                       {folder?.size < 1024000
@@ -203,7 +202,7 @@ const ChildFolder = memo(({ folder }) => {
                             .toString()
                             .concat(" MB")}
                     </div>
-                    <div className="">{folder.createDate.toString()}</div>
+                    <div className="">{dateFormat(folder?.createDate?.toString())}</div>
                   </div>
                 </div>
               )}
@@ -220,7 +219,7 @@ const ChildFolder = memo(({ folder }) => {
                   </h1>
                   <h1
                     onClick={() => {
-                      setIsClickRenameFolder(true);
+                      setIsClickRenameItem(true);
                       setIsRightClickOnFolder(false);
                     }}
                   >
@@ -233,7 +232,7 @@ const ChildFolder = memo(({ folder }) => {
                 </div>
               )}
             </div>
-          )}
+          {/* )} */}
 
           {/* //create new folder */}
           {isClickNewFolder && (
@@ -248,14 +247,14 @@ const ChildFolder = memo(({ folder }) => {
             </div>
           )}
 
-          {folder?.type !== "folder" && (
+          {/* {folder?.type !== "folder" && (
             <div>
               <div
                 onContextMenu={handleRightClickOnFile}
                 onClick={() => openFile(folder)}
                 className=" w-full m-1 grid grid-cols-3 p-1 gap-0.5 hover:bg-orange-400"
               >
-                <div className="flex">
+                <div className="flex gap-0.5">
                   {isSelect && (
                     <input
                       type="checkbox"
@@ -266,9 +265,9 @@ const ChildFolder = memo(({ folder }) => {
                   )}
                   <h1
       
-                    className=" w-full m-1 flex"
+                    className=" w-full m-1 flex whitespace-nowrap"
                   >
-                    📄{folder?.name}
+                    📄 {folder?.name}
                   </h1>
                 </div>
                 <div className="">
@@ -279,15 +278,34 @@ const ChildFolder = memo(({ folder }) => {
                         .toString()
                         .concat(" MB")}
                 </div>
-                <div className="">{folder.createDate.toString()}</div>
+                <div className="">{dateFormat(folder.createDate.toString())}</div>
               </div>
               {isRightClickOnFile && (
                 <div className=" absolute ml-40 z-20 h-40 w-30 bg-amber-500">
-                  <h1 onClick={() => handleDeleteFile(folder)}>Delete</h1>
+                  <h1
+                    onClick={() => {
+                      setIsClickNewFolder(true);
+                      setIsRightClickOnFolder(false);
+                    }}
+                  >
+                    New Folder
+                  </h1>
+                  <h1
+                    onClick={() => {
+                      setIsClickRenameItem(true);
+                      setIsRightClickOnFolder(false);
+                    }}
+                  >
+                    Rename
+                  </h1>
+
+                  <h1 onClick={() => handleDeleteFolder(folder)}>Delete</h1>
+                  <h1 onClick={() => handleClickOnCopy(folder.id)}>Copy</h1>
+                  <h1 onClick={() => handleClickOnMove(folder.id)}>Move</h1>
                 </div>
               )}
             </div>
-          )}
+          )} */}
 
           <div className=" flex justify-start pl-4">
             {isFolderOpen &&
@@ -295,9 +313,9 @@ const ChildFolder = memo(({ folder }) => {
               folder?.children.length == 0 && <div className="">Empty</div>}
           </div>
         </div>
-        <div>
+        <div className=" pl-4 overflow-hidden">
           {isFolderOpen && (
-            <div className=" ml-2">
+            <div className="">
               {folder?.children.map((childItem, index) => (
                 <ChildFolder key={index} folder={childItem} />
               ))}
