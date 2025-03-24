@@ -1,11 +1,10 @@
-import React, { memo, useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import ChildFolder from "./ChildFolder";
 import { useDispatch, useSelector } from "react-redux";
 import { setFolderData } from "../store/folderSlice.js";
 import { getAllFolders } from "../db/indexDB.js";
 
- function Folder() {
-  const [getFolders, setGetFolders] = useState([]);
+function Folder() {
   const dispatch = useDispatch();
   const folderData = useSelector((state) => state.folder.folderData);
   const searchData = useSelector((state) => state.folder.searchData);
@@ -16,9 +15,8 @@ import { getAllFolders } from "../db/indexDB.js";
   useEffect(() => {
     const getFolders = async () => {
       const getIndexDbFolders = await getAllFolders();
-      //console.log(getIndexDbFolders[0].data);
-      if (getIndexDbFolders[0].data) {
-        dispatch(setFolderData(getIndexDbFolders[0].data));
+      if (getIndexDbFolders) {
+        dispatch(setFolderData(getIndexDbFolders));
       }
     };
 
@@ -39,7 +37,7 @@ import { getAllFolders } from "../db/indexDB.js";
       : folderData;
 
   return (
-    <div className=" bg-slate-900 place-self-center rounded-md w-full lg:w-[60dvw] p-3 min-h-[80dvh]">
+    <div className=" bg-slate-900 place-self-center rounded-md w-full p-10 min-h-[80dvh]">
       {folders.map((data, index) => (
         <ChildFolder key={index} folder={data} />
       ))}
@@ -47,5 +45,4 @@ import { getAllFolders } from "../db/indexDB.js";
   );
 }
 
-
-export default React.memo(Folder)
+export default React.memo(Folder);
